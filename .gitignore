@@ -1,0 +1,5 @@
+# python env dependencies
+pytorchenv
+
+# max ds store files
+*.DS_Store
