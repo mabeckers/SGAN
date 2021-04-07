@@ -69,6 +69,14 @@ class Discriminator(nn.Module):
         output = torch.sigmoid(x) # want to predict real or fake so binary output
         return output
 
+def weights_init_normal(m):
+    classname = m.__class__.__name__
+    if classname.find("Conv") != -1:
+        torch.nn.init.normal_(m.weight.data, 0.0, 0.02)
+    elif classname.find("BatchNorm2d") != -1:
+        torch.nn.init.normal_(m.weight.data, 1.0, 0.02)
+        torch.nn.init.constant_(m.bias.data, 0.0)
+
 
 def main():
 
@@ -118,11 +126,13 @@ def main():
 
     # instantiate discriminator and it's optimizer and loss
     discriminator = Discriminator().to(device)
+    discriminator.apply(weights_init_normal)
     D_optimizer = torch.optim.Adam(discriminator.parameters(), lr=args.lr, betas=(args.b1, args.b2))
     D_loss = nn.BCELoss()
 
     # instantiate generator and it's optiimizer and loss
     generator = Generator(args.latent_dim, args.img_size).to(device)
+    generator.apply(weights_init_normal)
     G_optimizer = torch.optim.Adam(generator.parameters(), lr=args.lr, betas=(args.b1, args.b2))
     G_loss = nn.BCELoss()
 
