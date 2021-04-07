@@ -166,9 +166,9 @@ def main():
                     epoch, batch_idx * len(data), len(train_loader.dataset),
                     100. * batch_idx / len(train_loader), d_loss_total.item(), g_loss.item()))
                 
-                generate_and_save_images(generator,
-                                 epoch,
-                                 torch.rand((data.shape[0], args.latent_dim)))
+                # generate_and_save_images(generator,
+                #                  epoch,
+                #                  torch.rand((data.shape[0], args.latent_dim)))
 
                 save_image(gen_imgs.data[:10], "images/%d.png" % batch_idx, nrow=5, normalize=True)
         
