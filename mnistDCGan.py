@@ -21,22 +21,26 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
         self.init_size = int(np.ceil(image_size / 4)) # initial starting size of the generater image
         self.out_channels = out_channels
-        self.l1 = nn.Linear(latent_dim, int(128 * self.init_size  ** 2))
+        self.fc1 = nn.Linear(latent_dim, int(128 * self.init_size  ** 2))
+
+        self.conv_blocks = nn.Sequential(
+            nn.BatchNorm2d(128),
+            nn.Upsample(scale_factor=2),
+            nn.Conv2d(128, 128, 3, stride=1, padding=1),
+            nn.BatchNorm2d(128, 0.8),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Upsample(scale_factor=2),
+            nn.Conv2d(128, 64, 3, stride=1, padding=1),
+            nn.BatchNorm2d(64, 0.8),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(64, self.out_channels, 3, stride=1, padding=1),
+            nn.Tanh(),
+        )
 
     def forward(self, x):
-        x = self.l1(x)
+        x = self.fc1(x)
         x = x.view(x.shape[0], 128, self.init_size, self.init_size)  #(trainsamples, channels, image size lenght, image size height)
-        x = nn.BatchNorm2d(128)(x)
-        x = nn.Upsample(scale_factor=2)(x)
-        x = nn.Conv2d(128, 128, 3, stride=1, padding=1)(x)
-        x = nn.BatchNorm2d(128, 0.8)(x)
-        x = nn.LeakyReLU(0.2, inplace=True)(x)
-        x = nn.Upsample(scale_factor=2)(x)
-        x = nn.Conv2d(128, 64, 3, stride=1, padding=1)(x)
-        x = nn.BatchNorm2d(64, 0.8)(x)
-        x = nn.LeakyReLU(0.2, inplace=True)(x)
-        x = nn.Conv2d(64, self.out_channels, 3, stride=1, padding=1)(x)
-        x = nn.Tanh()(x)
+        x = self.conv_blocks(x)
         return x
         
 
