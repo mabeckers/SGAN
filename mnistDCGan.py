@@ -14,6 +14,7 @@ from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
 from torchvision import datasets
 from torchvision.utils import save_image
+import matplotlib.pyplot as plt
 
 class Generator(nn.Module):
     def __init__(self, latent_dim: int = 100, image_size: int = 28, out_channels: int = 1):
@@ -71,7 +72,7 @@ def main():
     parser.add_argument("--epochs", type=int, default=200, help="number of epochs of training")
     parser.add_argument("--batch_size", type=int, default=64, help="size of the batches")
     parser.add_argument("--test_batch_size", type = int, default = 1000, help = "size of the test set batch")
-    parser.add_argument("--lr", type=float, default=0.0002, help="adam: learning rate")
+    parser.add_argument("--lr", type=float, default=0.001, help="adam: learning rate")
     parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient")
     parser.add_argument("--b2", type=float, default=0.999, help="adam: decay of first order momentum of gradient")
     parser.add_argument('--gamma', type=float, default=0.7, metavar='M',
@@ -137,10 +138,10 @@ def main():
             TRAIN Generator
             """
             G_optimizer.zero_grad()
-            z = torch.rand((data.shape[0], args.latent_dim))
+            z = torch.rand((data.shape[0], args.latent_dim)).to(device)
 
-            g_output = generator(z)  # fake image by the generator
-            g_loss = G_loss(discriminator(g_output), target_valid)  # set up loss of the generator such that it is trained to fool discriminator
+            gen_imgs = generator(z)  # fake image by the generator
+            g_loss = G_loss(discriminator(gen_imgs), target_valid)  # set up loss of the generator such that it is trained to fool discriminator
             g_loss.backward()
             G_optimizer.step()
 
@@ -153,7 +154,7 @@ def main():
             D_optimizer.zero_grad()
             # forward pass and loss calculation
             d_loss_valid = D_loss(discriminator(data), target_valid)
-            d_loss_fake = D_loss(discriminator(g_output.detach()), target_fake)
+            d_loss_fake = D_loss(discriminator(gen_imgs.detach()), target_fake)
             d_loss_total = (d_loss_valid + d_loss_fake) / 2
             
             # gradient descent step
@@ -164,14 +165,38 @@ def main():
                 print('Train Epoch: {} [{}/{} ({:.0f}%)]\tDiscriminator Loss: {:.6f}\tGenerator Loss: {:.6f}'.format(
                     epoch, batch_idx * len(data), len(train_loader.dataset),
                     100. * batch_idx / len(train_loader), d_loss_total.item(), g_loss.item()))
+                
+                generate_and_save_images(generator,
+                                 epoch,
+                                 torch.rand((data.shape[0], args.latent_dim)))
 
+                save_image(gen_imgs.data[:10], "images/%d.png" % batch_idx, nrow=5, normalize=True)
         
-        
+        # for every epoch print and save a picture
+        generate_and_save_images(generator,
+                                 epoch,
+                                 torch.rand((data.shape[0], args.latent_dim)))
+         
         """
         TEST
         """
 
         scheduler.step()
+
+def generate_and_save_images(model, epoch, test_input):
+  # make sure the training parameter is set to False because we
+  # don't want to train the batchnorm layer when doing inference.
+  predictions = model(test_input)
+
+  fig = plt.figure(figsize=(4,4))
+  number_pics_to_show = min(predictions.shape[0], 10)
+  for i in range(number_pics_to_show):
+      plt.subplot(4, 4, i+1)
+      plt.imshow(predictions[i, 0, :, :].detach().numpy() * 127.5 + 127.5, cmap='gray')
+      plt.axis('off')
+        
+  #plt.savefig('image_at_epoch_{:04d}.png'.format(epoch))
+  plt.show()
 
 if __name__ == '__main__':
     main()
