@@ -1,8 +1,8 @@
 import argparse
 import math
-
 import os
 
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
@@ -12,9 +12,12 @@ import torchvision.transforms as transforms
 from torch.autograd import Variable
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 from torchvision import datasets
 from torchvision.utils import save_image
-import matplotlib.pyplot as plt
+
+writer = SummaryWriter()
+
 
 class Generator(nn.Module):
     def __init__(self, latent_dim: int = 100, image_size: int = 28, out_channels: int = 1):
@@ -128,18 +131,19 @@ def main():
     discriminator = Discriminator().to(device)
     discriminator.apply(weights_init_normal)
     D_optimizer = torch.optim.Adam(discriminator.parameters(), lr=args.lr, betas=(args.b1, args.b2))
-    D_loss = nn.BCELoss()
 
     # instantiate generator and it's optiimizer and loss
     generator = Generator(args.latent_dim, args.img_size).to(device)
     generator.apply(weights_init_normal)
     G_optimizer = torch.optim.Adam(generator.parameters(), lr=args.lr, betas=(args.b1, args.b2))
-    G_loss = nn.BCELoss()
+    
+    loss_func = nn.BCELoss()
 
     #scheduler = StepLR(D_optimizer, step_size=1, gamma=args.gamma)
 
 
     # start training
+    iteration_counter = 0
     for epoch in range(1, args.epochs + 1):
         for batch_idx, (data, _) in enumerate(train_loader):
             # create valid/fake training labels for discriminator as 1s and 0s
@@ -155,7 +159,7 @@ def main():
             z = torch.rand((data.shape[0], args.latent_dim)).to(device)
 
             gen_imgs = generator(z)  # fake image by the generator
-            g_loss = G_loss(discriminator(gen_imgs), target_valid)  # set up loss of the generator such that it is trained to fool discriminator
+            g_loss = loss_func(discriminator(gen_imgs), target_valid)  # set up loss of the generator such that it is trained to fool discriminator
             g_loss.backward()
             G_optimizer.step()
 
@@ -167,26 +171,27 @@ def main():
             # zero out the gradients of the optimizer for this batch
             D_optimizer.zero_grad()
             # forward pass and loss calculation
-            d_loss_valid = D_loss(discriminator(data), target_valid)
-            d_loss_fake = D_loss(discriminator(gen_imgs.detach()), target_fake)
+            d_loss_valid = loss_func(discriminator(data), target_valid)
+            d_loss_fake = loss_func(discriminator(gen_imgs.detach()), target_fake)
             d_loss_total = (d_loss_valid + d_loss_fake) / 2
             
             # gradient descent step
             d_loss_total.backward()
             D_optimizer.step()
 
+            iteration_counter = iteration_counter + 1
+
             if batch_idx % args.log_interval == 0:
                 print('Train Epoch: {} [{}/{} ({:.0f}%)]\tDiscriminator Loss: {:.6f}\tGenerator Loss: {:.6f}'.format(
                     epoch, batch_idx * len(data), len(train_loader.dataset),
                     100. * batch_idx / len(train_loader), d_loss_total.item(), g_loss.item()))
-
-                save_image(gen_imgs.data[:10], "images/%d.png" % batch_idx, nrow=5, normalize=True)
+                
+                writer.add_scalar("Train/D_loss", d_loss_total.item(), iteration_counter)
+                writer.add_scalar("Train/G_loss", g_loss.item(), iteration_counter)
         
-        # for every epoch print and save a picture
-        # generate_and_save_images(generator,
-        #                          epoch,
-        #                          torch.rand((data.shape[0], args.latent_dim)))
-         
+        # for every epoch save generated pic
+        save_image(gen_imgs.data[:10], "images/%d.png" % batch_idx, nrow=5, normalize=True)
+
         """
         TEST
         """
