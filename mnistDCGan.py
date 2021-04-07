@@ -76,7 +76,7 @@ def main():
     parser.add_argument("--epochs", type=int, default=200, help="number of epochs of training")
     parser.add_argument("--batch_size", type=int, default=64, help="size of the batches")
     parser.add_argument("--test_batch_size", type = int, default = 1000, help = "size of the test set batch")
-    parser.add_argument("--lr", type=float, default=0.001, help="adam: learning rate")
+    parser.add_argument("--lr", type=float, default=0.0002, help="adam: learning rate")
     parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient")
     parser.add_argument("--b2", type=float, default=0.999, help="adam: decay of first order momentum of gradient")
     parser.add_argument('--gamma', type=float, default=0.7, metavar='M',
@@ -118,15 +118,15 @@ def main():
 
     # instantiate discriminator and it's optimizer and loss
     discriminator = Discriminator().to(device)
-    D_optimizer = optim.Adadelta(discriminator.parameters(), lr=args.lr)
+    D_optimizer = torch.optim.Adam(discriminator.parameters(), lr=args.lr, betas=(args.b1, args.b2))
     D_loss = nn.BCELoss()
 
     # instantiate generator and it's optiimizer and loss
     generator = Generator(args.latent_dim, args.img_size).to(device)
-    G_optimizer = optim.Adadelta(generator.parameters(), lr=args.lr)
+    G_optimizer = torch.optim.Adam(generator.parameters(), lr=args.lr, betas=(args.b1, args.b2))
     G_loss = nn.BCELoss()
 
-    scheduler = StepLR(D_optimizer, step_size=1, gamma=args.gamma)
+    #scheduler = StepLR(D_optimizer, step_size=1, gamma=args.gamma)
 
 
     # start training
@@ -181,7 +181,7 @@ def main():
         TEST
         """
 
-        scheduler.step()
+        #scheduler.step()
 
 def generate_and_save_images(model, epoch, test_input):
   # make sure the training parameter is set to False because we
