@@ -3,3 +3,9 @@ pytorchenv
 
 # max ds store files
 *.DS_Store
+
+# tensorflow runs
+runs
+
+# output folder for generated images
+images

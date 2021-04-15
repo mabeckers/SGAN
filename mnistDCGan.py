@@ -54,8 +54,9 @@ class Discriminator(nn.Module):
         self.conv2 = nn.Conv2d(32, 64, 3, 1)
         self.dropout1 = nn.Dropout(0.25)
         self.dropout2 = nn.Dropout(0.5)
-        self.fc1 = nn.Linear(9216, 128)
-        self.fc2 = nn.Linear(128, 1)
+        self.fc = nn.Linear(9216, 1)
+        # self.fc1 = nn.Linear(9216, 128)
+        # self.fc2 = nn.Linear(128, 1)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -65,11 +66,13 @@ class Discriminator(nn.Module):
         x = F.max_pool2d(x, 2)
         x = self.dropout1(x)
         x = torch.flatten(x, 1)
-        x = self.fc1(x)
-        x = F.relu(x)
-        x = self.dropout2(x)
-        x = self.fc2(x)
-        output = torch.sigmoid(x) # want to predict real or fake so binary output
+        x = self.fc(x)
+        output = torch.sigmoid(x)
+        # x = self.fc1(x)
+        # x = F.relu(x)
+        # x = self.dropout2(x)
+        # x = self.fc2(x)
+        # output = torch.sigmoid(x) # want to predict real or fake so binary output
         return output
 
 def weights_init_normal(m):

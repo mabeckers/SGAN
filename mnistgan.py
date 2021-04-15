@@ -30,7 +30,7 @@ parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first 
 parser.add_argument("--b2", type=float, default=0.999, help="adam: decay of first order momentum of gradient")
 parser.add_argument("--n_cpu", type=int, default=8, help="number of cpu threads to use during batch generation")
 parser.add_argument("--latent_dim", type=int, default=100, help="dimensionality of the latent space")
-parser.add_argument("--img_size", type=int, default=32, help="size of each image dimension")
+parser.add_argument("--img_size", type=int, default=28, help="size of each image dimension")
 parser.add_argument("--channels", type=int, default=1, help="number of image channels")
 parser.add_argument("--sample_interval", type=int, default=400, help="interval between image sampling")
 opt = parser.parse_args()
@@ -47,6 +47,57 @@ def weights_init_normal(m):
         torch.nn.init.normal_(m.weight.data, 1.0, 0.02)
         torch.nn.init.constant_(m.bias.data, 0.0)
 
+class DiscriminatorMax(nn.Module):
+    def __init__(self):
+        super(DiscriminatorMax, self).__init__()
+        self.conv1 = nn.Conv2d(1, 32, 3, 1)
+        self.conv2 = nn.Conv2d(32, 64, 3, 1)
+        self.dropout1 = nn.Dropout(0.25)
+        self.dropout2 = nn.Dropout(0.5)
+        self.fc1 = nn.Linear(9216, 128)
+        self.fc2 = nn.Linear(128, 1)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = F.relu(x)
+        x = self.conv2(x)
+        x = F.relu(x)
+        x = F.max_pool2d(x, 2)
+        x = self.dropout1(x)
+        x = torch.flatten(x, 1)
+        x = self.fc1(x) #-> REMOVE THIS LAYER AS IT GIVES TOO BIG OF AN ADVANTAGE TO DISCRIMINATOR
+        x = F.relu(x)
+        x = self.dropout2(x)
+        x = self.fc2(x)
+        output = torch.sigmoid(x) # want to predict real or fake so binary output
+        return output
+
+class GeneratorMax(nn.Module):
+    def __init__(self, latent_dim: int = 100, image_size: int = 28, out_channels: int = 1):
+        super(GeneratorMax, self).__init__()
+        self.init_size = int(np.ceil(image_size / 4)) # initial starting size of the generater image
+        self.out_channels = out_channels
+        self.fc1 = nn.Linear(latent_dim, int(128 * self.init_size  ** 2))
+
+        self.conv_blocks = nn.Sequential(
+            nn.BatchNorm2d(128),
+            nn.Upsample(scale_factor=2),
+            nn.Conv2d(128, 128, 3, stride=1, padding=1),
+            nn.BatchNorm2d(128, 0.8),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Upsample(scale_factor=2),
+            nn.Conv2d(128, 64, 3, stride=1, padding=1),
+            nn.BatchNorm2d(64, 0.8),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(64, self.out_channels, 3, stride=1, padding=1),
+            nn.Tanh(),
+        )
+
+    def forward(self, x):
+        x = self.fc1(x)
+        x = x.view(x.shape[0], 128, self.init_size, self.init_size)  #(trainsamples, channels, image size lenght, image size height)
+        x = self.conv_blocks(x)
+        return x
 
 class Generator(nn.Module):
     def __init__(self):
