@@ -176,9 +176,9 @@ discriminator.apply(weights_init_normal)
 os.makedirs("../data", exist_ok=True)
 
 transformations = transforms.Compose(
-            [transforms.Resize(opt.img_size),
+            [#transforms.Resize(opt.img_size),
             transforms.ToTensor(), 
-            #transforms.Normalize([0.5], [0.5])
+            transforms.Normalize([0.5], [0.5])
             ])
 dataloader = torch.utils.data.DataLoader(
     datasets.MNIST(
@@ -203,7 +203,19 @@ Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 iteration_counter = 0
 
 for epoch in range(opt.n_epochs):
+    nimages = 0
+    mean = 0.0
+    var = 0.0
     for i, (imgs, _) in enumerate(dataloader):
+        # calculate mean and variance
+        batch = imgs
+        # Rearrange batch to be the shape of [B, C, W * H]
+        batch = batch.view(batch.size(0), batch.size(1), -1)
+        # Update total number of images
+        nimages += batch.size(0)
+        # Compute mean and std here
+        mean += batch.mean(2).sum(0) 
+        var += batch.var(2).sum(0)
 
         # Adversarial ground truths
         valid = Variable(Tensor(imgs.shape[0], 1).fill_(1.0), requires_grad=False)
@@ -256,3 +268,7 @@ for epoch in range(opt.n_epochs):
             save_image(gen_imgs.data[:25], "images/%d.png" % batches_done, nrow=5, normalize=True)
             writer.add_scalar("Train/D_loss", d_loss.item(), iteration_counter)
             writer.add_scalar("Train/G_loss", g_loss.item(), iteration_counter)
+
+    mean /= nimages
+    var /= nimages
+    std = torch.sqrt(var)
