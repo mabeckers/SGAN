@@ -167,6 +167,9 @@ if cuda:
     generator.cuda()
     discriminator.cuda()
     adversarial_loss.cuda()
+    device = "cuda"
+else:
+    device = "cpu"
 
 # Initialize weights
 generator.apply(weights_init_normal)
@@ -218,11 +221,9 @@ for epoch in range(opt.n_epochs):
         var += batch.var(2).sum(0)
 
         # Adversarial ground truths
-        valid = Variable(Tensor(imgs.shape[0], 1).fill_(1.0), requires_grad=False)
-        fake = Variable(Tensor(imgs.shape[0], 1).fill_(0.0), requires_grad=False)
-
-        # Configure input
-        real_imgs = Variable(imgs.type(Tensor))
+        valid = torch.ones((imgs.shape[0],1), requires_grad=False)
+        fake = torch.zeros((imgs.shape[0],1), requires_grad=False)
+        imgs, valid, fake = imgs.to(device), valid.to(device), fake.to(device)
 
         # -----------------
         #  Train Generator
@@ -231,7 +232,7 @@ for epoch in range(opt.n_epochs):
         optimizer_G.zero_grad()
 
         # Sample noise as generator input
-        z = Variable(Tensor(np.random.normal(0, 1, (imgs.shape[0], opt.latent_dim))))
+        z = torch.normal(0,1,(imgs.shape[0], opt.latent_dim)).to(device)
 
         # Generate a batch of images
         gen_imgs = generator(z)
@@ -249,7 +250,7 @@ for epoch in range(opt.n_epochs):
         optimizer_D.zero_grad()
 
         # Measure discriminator's ability to classify real from generated samples
-        real_loss = adversarial_loss(discriminator(real_imgs), valid)
+        real_loss = adversarial_loss(discriminator(imgs), valid)
         fake_loss = adversarial_loss(discriminator(gen_imgs.detach()), fake)
         d_loss = (real_loss + fake_loss) / 2
 
