@@ -1,0 +1,6 @@
+"remote.SSH.defaultExtensions": [
+    "eamodio.gitlens",
+    "mutantdino.resourcemonitor",
+    "ms-python.python",
+    "ms-python.vscode-pylance"
+]
