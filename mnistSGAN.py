@@ -178,7 +178,7 @@ Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 #  Training
 # ----------
 iteration_counter = 0
-labeled_idx = opt.bach_size // 2
+labeled_idx = opt.batch_size // 2
 for epoch in range(opt.n_epochs):
 
     for i, (imgs, labels) in enumerate(dataloader):
@@ -224,7 +224,7 @@ for epoch in range(opt.n_epochs):
         # Measure discriminator's ability to classify real from generated samples
         validity_real_imgs, _  = discriminator(imgs)
         real_loss = adversarial_loss(validity_real_imgs, valid)
-        fake_loss = adversarial_loss(validity_fake_imgs, fake)
+        fake_loss = adversarial_loss(validity_fake_imgs.detach(), fake)
 
         # measure discriminator's ability to classify the digits from 0,...,9
         _, class_real_images = discriminator(imgs_labeled)
