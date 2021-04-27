@@ -157,10 +157,21 @@ transformations = transforms.Compose(
             transforms.ToTensor(), 
             transforms.Normalize([0.5], [0.5])
             ])
-dataloader = torch.utils.data.DataLoader(
+train_dataloader = torch.utils.data.DataLoader(
     datasets.MNIST(
         "../data",
         train=True,
+        download=True,
+        transform=transformations
+    ),
+    batch_size=opt.batch_size,
+    shuffle=True,
+)
+
+test_dataloader = torch.utils.data.DataLoader(
+    datasets.MNIST(
+        "../data",
+        train=False,
         download=True,
         transform=transformations
     ),
@@ -181,7 +192,7 @@ iteration_counter = 0
 labeled_idx = opt.batch_size // 2
 for epoch in range(opt.n_epochs):
 
-    for i, (imgs, labels) in enumerate(dataloader):
+    for i, (imgs, labels) in enumerate(train_dataloader):
 
         # create labeled and unlabeled REAL data
         imgs_labeled = imgs[:labeled_idx]
@@ -223,8 +234,10 @@ for epoch in range(opt.n_epochs):
 
         # Measure discriminator's ability to classify real from generated samples
         validity_real_imgs, _  = discriminator(imgs)
+        validity_fake_imgs, _  = discriminator(gen_imgs.detach())
+
         real_loss = adversarial_loss(validity_real_imgs, valid)
-        fake_loss = adversarial_loss(validity_fake_imgs.detach(), fake)
+        fake_loss = adversarial_loss(validity_fake_imgs, fake)
 
         # measure discriminator's ability to classify the digits from 0,...,9
         _, class_real_images = discriminator(imgs_labeled)
@@ -239,11 +252,29 @@ for epoch in range(opt.n_epochs):
 
         print(
             "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f]"
-            % (epoch, opt.n_epochs, i, len(dataloader), d_loss.item(), g_loss.item())
+            % (epoch, opt.n_epochs, i, len(train_dataloader), d_loss.item(), g_loss.item())
         )
 
-        batches_done = epoch * len(dataloader) + i
+        batches_done = epoch * len(train_dataloader) + i
         if batches_done % opt.sample_interval == 0:
             save_image(gen_imgs.data[:25], "images/%d.png" % batches_done, nrow=5, normalize=True)
             writer.add_scalar("Train/D_loss", d_loss.item(), iteration_counter)
             writer.add_scalar("Train/G_loss", g_loss.item(), iteration_counter)
+
+    # Testing for classifier accuracy
+    discriminator.eval()
+    test_loss = 0
+    correct = 0
+    with torch.no_grad():
+        for data, target in test_dataloader:
+            data, target = data.to(device), target.to(device)
+            output = discriminator(data)
+            test_loss += classification_loss(output, target)  # sum up batch loss
+            pred = output.argmax(dim=1, keepdim=True)  # get the index of the max log-probability
+            correct += pred.eq(target.view_as(pred)).sum().item()
+
+    test_loss /= len(test_dataloader.dataset)
+
+    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
+        test_loss, correct, len(test_dataloader.dataset),
+        100. * correct / len(test_dataloader.dataset)))
