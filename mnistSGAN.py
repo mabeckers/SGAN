@@ -248,8 +248,6 @@ for epoch in range(opt.n_epochs):
         d_loss.backward()
         optimizer_D.step()
 
-        iteration_counter = iteration_counter + 1
-
         print(
             "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f]"
             % (epoch, opt.n_epochs, i, len(train_dataloader), d_loss.item(), g_loss.item())
@@ -261,6 +259,8 @@ for epoch in range(opt.n_epochs):
             writer.add_scalar("Train/D_loss", d_loss.item(), iteration_counter)
             writer.add_scalar("Train/G_loss", g_loss.item(), iteration_counter)
 
+        iteration_counter = iteration_counter + 1
+    
     # Testing for classifier accuracy
     discriminator.eval()
     test_loss = 0
@@ -274,6 +274,8 @@ for epoch in range(opt.n_epochs):
             correct += pred.eq(target.view_as(pred)).sum().item()
 
     test_loss /= len(test_dataloader.dataset)
+    writer.add_scalar("Test/Class_loss", test_loss.item(), iteration_counter)
+    writer.add_scalar("Test/Accuracy", correct / len(test_dataloader.dataset), iteration_counter)
 
     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
         test_loss, correct, len(test_dataloader.dataset),
