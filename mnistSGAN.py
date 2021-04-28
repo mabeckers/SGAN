@@ -268,7 +268,7 @@ for epoch in range(opt.n_epochs):
     with torch.no_grad():
         for data, target in test_dataloader:
             data, target = data.to(device), target.to(device)
-            output = discriminator(data)
+            _, output = discriminator(data)
             test_loss += classification_loss(output, target)  # sum up batch loss
             pred = output.argmax(dim=1, keepdim=True)  # get the index of the max log-probability
             correct += pred.eq(target.view_as(pred)).sum().item()
