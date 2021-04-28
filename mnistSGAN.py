@@ -6,7 +6,7 @@ import torchvision.transforms as transforms
 from torchvision.utils import save_image
 
 from torchvision import datasets
-
+import shutil
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
@@ -16,7 +16,7 @@ from torchvision import datasets
 from torchvision.utils import save_image
 
 writer = SummaryWriter()
-
+shutil.rmtree("images")
 os.makedirs("images", exist_ok=True)
 
 parser = argparse.ArgumentParser()
