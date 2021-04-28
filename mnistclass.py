@@ -152,8 +152,8 @@ for epoch in range(opt.n_epochs):
         optimizer_C.step()
 
         print(
-            "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f]"
-            % (epoch, opt.n_epochs, i, len(train_dataloader), d_loss.item(), g_loss.item())
+            "[Epoch %d/%d] [Batch %d/%d] [C loss: %f]"
+            % (epoch, opt.n_epochs, i, len(train_dataloader), c_loss.item())
         )
 
         batches_done = epoch * len(train_dataloader) + i
